@@ -310,6 +310,9 @@ int main(int argc, char **argv) {
         return 1;
     }
 
+    RGFW_monitor monitor = RGFW_getPrimaryMonitor();
+    border_width *= monitor.scaleX;
+
     RGFW_setClassName("pin");
     RGFW_window *win = RGFW_createWindow("pin", 0, 0, image_width + 2 * border_width, image_height + 2 * border_width,
                                          RGFW_windowNoBorder | RGFW_windowNoResize | RGFW_windowCenter | RGFW_windowFloating | RGFW_windowOpenGL | RGFW_windowTransparent);
