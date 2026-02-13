@@ -4,7 +4,7 @@ Exec=pin %u
 Icon=/usr/share/pixmaps/pin.svg
 Terminal=false
 Categories=Graphics;2DGraphics;Viewer;
-MimeType=image/png;
+MimeType=image/png;image/jpeg;image/jpg;
 NoDisplay=true
 
 Name=pin

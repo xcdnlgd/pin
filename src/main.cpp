@@ -197,14 +197,15 @@ u32 load_shader_program_source(const char *vert_source, const char *frag_source)
     return shader_program;
 }
 
-u32 load_texture(const char *path, GLenum color_format) {
+u32 load_texture(const char *path) {
     stbi_set_flip_vertically_on_load(true);
     int width, height, nrChannels;
-    u8 *data = stbi_load(path, &width, &height, &nrChannels, 0);
+    u8 *data = stbi_load(path, &width, &height, &nrChannels, 4);
     if (!data) {
         fprintf(stderr, "ERROR: cannot load %s\n", path);
         return 0;
     }
+    GLenum color_format = GL_RGBA;
     printf("loaded %s\n", path);
     u32 texture;
     glGenTextures(1, &texture);
@@ -213,7 +214,7 @@ u32 load_texture(const char *path, GLenum color_format) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, color_format, GL_UNSIGNED_BYTE, data);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, color_format, GL_UNSIGNED_BYTE, data);
     glGenerateMipmap(GL_TEXTURE_2D);
     free(data);
     return texture;
@@ -348,7 +349,7 @@ int main(int argc, char **argv) {
     }
 
     glUseProgram(shader_program);
-    u32 texture1 = load_texture(path, GL_RGBA);
+    u32 texture1 = load_texture(path);
     set_uniform_int(shader_program, "texture1", 0);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, texture1);
