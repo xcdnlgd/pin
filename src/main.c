@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 #include <time.h>
 #ifdef RELEASE
 #include "./impl.c"
@@ -114,7 +115,7 @@ double get_real_time_seconds() {
 
 double get_time_seconds() {
     struct timespec now_ts = get_timespec();
-    double from_start = double(now_ts.tv_sec - init_ts.tv_sec) + (double)(now_ts.tv_nsec - init_ts.tv_nsec) / 1e9;
+    double from_start = (double)(now_ts.tv_sec - init_ts.tv_sec) + (double)(now_ts.tv_nsec - init_ts.tv_nsec) / 1e9;
     return from_start;
 }
 
@@ -370,8 +371,6 @@ int main(int argc, char **argv) {
     int scale_level = 0;
     int opacity_level = 0;
     bool ctrl_down = false;
-    float x_scale = 0;
-    float y_scale = 0;
     while (RGFW_window_shouldClose(win) == false) {
         frame++;
         RGFW_waitForEvent(-1);

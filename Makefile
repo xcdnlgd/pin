@@ -1,19 +1,19 @@
 .PHONY: build release clean install loc
 build: impl.o
-	clang++ -Wall -Wextra -Wno-unused-parameter -Wno-unused -o pin \
+	clang -Wall -Wextra -Wno-unused-parameter -Wno-unused -o pin \
     	-g \
     	-lX11 -lXrandr -lm -lGL \
-    	./src/main.cpp ./impl.o
+    	./src/main.c ./impl.o
 
 impl.o: ./3rd/glad/gl.h ./3rd/RGFW.h ./3rd/stb_image.h ./src/impl.c
 	clang -Wall -Wextra -Wno-unused-parameter -Wno-unused -g -c ./src/impl.c -fPIC
 
 release:
-	clang++ -Wall -Wextra -Wno-unused-parameter -Wno-unused -o pin \
+	clang -Wall -Wextra -Wno-unused-parameter -Wno-unused -o pin \
 		-D RELEASE \
     	-O2 \
     	-lX11 -lXrandr -lm -lGL \
-    	./src/main.cpp
+    	./src/main.c
 clean:
 	rm -f ./impl.o ./pin
 
