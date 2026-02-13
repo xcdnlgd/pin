@@ -7,6 +7,12 @@ uniform float border_width;
 uniform float width;
 uniform float height;
 
+float sdBox( in vec2 p, in vec2 b )
+{
+    vec2 d = abs(p)-b;
+    return length(max(d,0.0)) + min(max(d.x,d.y),0.0);
+}
+
 void main()
 {
     float x_scale = (width+2*border_width)/width;
@@ -22,6 +28,11 @@ void main()
     if (is_image) {
         frag_color = texture(texture1, scaled_uv) * opacity;
     } else {
-        frag_color = vec4(0.3098, 0.7058, 0.9176, 1.0) * opacity;
+        vec2 b = vec2(width/2, height/2);
+        vec2 p;
+        p.x = (tex_coord.x-0.5)*(width+2*border_width);
+        p.y = (tex_coord.y-0.5)*(height+2*border_width);
+        float t = sdBox(p, b) / border_width;
+        frag_color = mix(vec4(0.3098, 0.7058, 0.9176, 1.0) * opacity, vec4(0, 0, 0, 0), t);
     }
 }

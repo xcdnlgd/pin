@@ -14,6 +14,8 @@
 #include "../3rd/glad/gl.h"
 #include "../3rd/stb_image.h"
 #endif
+#include <X11/Xatom.h>
+#include <X11/Xlib.h>
 
 #define array_count(array) (sizeof(array) / sizeof((array)[0]))
 #define kilobytes(n) (1024LL * (n))
@@ -28,7 +30,7 @@
 int success;
 char infoLog[512];
 
-int border_width = 3;
+int border_width = 5;
 
 const char *vertex_source =
     "#version 330 core\n"
@@ -53,6 +55,12 @@ const char *fragment_source =
     "uniform float width;\n"
     "uniform float height;\n"
     "\n"
+    "float sdBox( in vec2 p, in vec2 b )\n"
+    "{\n"
+    "    vec2 d = abs(p)-b;\n"
+    "    return length(max(d,0.0)) + min(max(d.x,d.y),0.0);\n"
+    "}\n"
+    "\n"
     "void main()\n"
     "{\n"
     "    float x_scale = (width+2*border_width)/width;\n"
@@ -68,7 +76,12 @@ const char *fragment_source =
     "    if (is_image) {\n"
     "        frag_color = texture(texture1, scaled_uv) * opacity;\n"
     "    } else {\n"
-    "        frag_color = vec4(0.3098, 0.7058, 0.9176, 1.0) * opacity;\n"
+    "        vec2 b = vec2(width/2, height/2);\n"
+    "        vec2 p;\n"
+    "        p.x = (tex_coord.x-0.5)*(width+2*border_width);\n"
+    "        p.y = (tex_coord.y-0.5)*(height+2*border_width);\n"
+    "        float t = sdBox(p, b) / border_width;\n"
+    "        frag_color = mix(vec4(0.3098, 0.7058, 0.9176, 1.0) * opacity, vec4(0, 0, 0, 0), t);\n"
     "    }\n"
     "}\n";
 
@@ -250,6 +263,36 @@ void init() {
     init_ts = get_timespec();
 }
 
+void requestSystemMove(RGFW_window *win) {
+    Display *display = (Display *)RGFW_getDisplay_X11();
+    Atom moveResizeAtom = XInternAtom(display, "_NET_WM_MOVERESIZE", False);
+
+    XEvent xev;
+    memset(&xev, 0, sizeof(xev));
+    xev.xclient.type = ClientMessage;
+    xev.xclient.message_type = moveResizeAtom;
+    xev.xclient.display = (Display *)RGFW_getDisplay_X11();
+    xev.xclient.window = win->src.window;
+    xev.xclient.format = 32;
+
+    Window root, child;
+    int root_x, root_y, win_x, win_y;
+    unsigned int mask;
+    XQueryPointer(display, DefaultRootWindow(display),
+                  &root, &child, &root_x, &root_y, &win_x, &win_y, &mask);
+
+    xev.xclient.data.l[0] = root_x;
+    xev.xclient.data.l[1] = root_y;
+    xev.xclient.data.l[2] = 8;
+    xev.xclient.data.l[3] = Button1;
+    xev.xclient.data.l[4] = 1;
+
+    XSendEvent(display, DefaultRootWindow(display), False,
+               SubstructureRedirectMask | SubstructureNotifyMask, &xev);
+
+    XFlush(display);
+}
+
 int main(int argc, char **argv) {
     if (argc != 2) {
         print_help_msg();
@@ -282,7 +325,7 @@ int main(int argc, char **argv) {
 #ifdef RELEASE
     u32 shader_program = load_shader_program_source(vertex_source, fragment_source);
 #else
-    u32 shader_program = load_shader_program_path("/home/xcdnlgd/dev/cpp/pin/src/v.vert", "/home/xcdnlgd/dev/cpp/pin/src/f.frag");
+    u32 shader_program = load_shader_program_path("./src/v.vert", "./src/f.frag");
 #endif
 
     u32 vao;
@@ -315,9 +358,6 @@ int main(int argc, char **argv) {
     long long frame = 0;
     int scale_level = 0;
     int opacity_level = 0;
-    bool dragging = false;
-    int drag_start_local_x = 0;
-    int drag_start_local_y = 0;
     bool ctrl_down = false;
     float x_scale = 0;
     float y_scale = 0;
@@ -346,18 +386,12 @@ int main(int argc, char **argv) {
                 } break;
                 case RGFW_mouseButtonPressed: {
                     if (event.button.value == RGFW_mouseLeft) {
-                        dragging = true;
-                        assert(RGFW_window_getMouse(win, &drag_start_local_x, &drag_start_local_y));
-                        RGFW_window_setMouseStandard(win, RGFW_mouseResizeAll);
+                        requestSystemMove(win);
                     } else if (event.button.value == RGFW_mouseMiddle) {
                         return 0;
                     }
                 } break;
                 case RGFW_mouseButtonReleased: {
-                    if (event.button.value == RGFW_mouseLeft) {
-                        dragging = false;
-                        RGFW_window_setMouseDefault(win);
-                    }
                 } break;
                 case RGFW_windowRefresh: {
                     need_redraw = true;
@@ -381,17 +415,6 @@ int main(int argc, char **argv) {
         if (new_width != win->w || new_height != win->h) {
             RGFW_window_resize(win, new_width, new_height);
             glViewport(0, 0, new_width, new_height);
-        }
-
-        if (dragging) {
-            int x;
-            int y;
-            assert(RGFW_getGlobalMouse(&x, &y));
-            int new_window_x = x - drag_start_local_x;
-            int new_window_y = y - drag_start_local_y;
-            if (win->x != new_window_x || win->y != new_window_y) {
-                RGFW_window_move(win, new_window_x, new_window_y);
-            }
         }
 
         if (need_redraw) {
