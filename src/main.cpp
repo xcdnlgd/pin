@@ -7,10 +7,12 @@
 #include "./impl.c"
 #else
 #define RGFW_NATIVE
+#define RGFW_OPENGL
 #define RGFW_IMPORT
 #define RGFW_UNIX
 #include "../3rd/RGFW.h"
 #include "../3rd/stb_image.h"
+#include "../3rd/glad/gl.h"
 #endif
 
 #define array_count(array) (sizeof(array) / sizeof((array)[0]))
@@ -28,6 +30,23 @@ u32 icon[3 * 3] = {
     0x000000ff, 0xff00ffff, 0xff00ffff,
     0xff0000ff, 0xff0000ff, 0xff0000ff
 };
+
+int success;
+char infoLog[512];
+
+float vertices[] = {
+    -1.0f, -1.0f, 0.0f,     0.0f, 0.0f,
+     1.0f, -1.0f, 0.0f,     1.0f, 0.0f,
+     1.0f,  1.0f, 0.0f,     1.0f, 1.0f,
+    -1.0f,  1.0f, 0.0f,     0.0f, 1.0f,
+};
+
+unsigned int indices[] = {
+    0, 1, 2,
+    0, 3, 2,
+};
+
+const u32 vertex_stride = 5 * sizeof(float);
 
 struct timespec init_ts = {};
 
@@ -74,6 +93,68 @@ char *read_entire_file(const char *path) {
     return buffer;
 }
 
+u32 load_shader(const char *path, GLenum type) {
+    const char *shader_source = read_entire_file(path);
+    u32 shader = glCreateShader(type);
+    glShaderSource(shader, 1, &shader_source, 0);
+    glCompileShader(shader);
+    free((void *)shader_source);
+    glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
+    if (!success) {
+        glGetShaderInfoLog(shader, sizeof(infoLog), NULL, infoLog);
+        fprintf(stderr, "ERROR: %s:%s\n", path, infoLog);
+        return 0;
+    }
+    return shader;
+}
+
+u32 load_shader_program(const char *vert_path, const char *frag_path) {
+    u32 vertex_shader = load_shader(vert_path, GL_VERTEX_SHADER);
+    u32 fragment_shader = load_shader(frag_path, GL_FRAGMENT_SHADER);
+
+    u32 shader_program = glCreateProgram();
+
+    glAttachShader(shader_program, vertex_shader);
+    glAttachShader(shader_program, fragment_shader);
+    glLinkProgram(shader_program);
+    glDeleteShader(vertex_shader);
+    glDeleteShader(fragment_shader);
+    glGetProgramiv(shader_program, GL_LINK_STATUS, &success);
+    if (!success) {
+        glGetProgramInfoLog(shader_program, sizeof(infoLog), NULL, infoLog);
+        fprintf(stderr, "ERROR: linking shader: %s\n", infoLog);
+        glDeleteProgram(shader_program);
+        return 0;
+    }
+    return shader_program;
+}
+
+u32 load_texture(const char *path, GLenum color_format) {
+    stbi_set_flip_vertically_on_load(true);
+    int width, height, nrChannels;
+    u8 *data = stbi_load(path, &width, &height, &nrChannels, 0);
+    if (!data) {
+        fprintf(stderr, "ERROR: cannot load %s\n", path);
+        return 0;
+    }
+    printf("loaded %s\n", path);
+    u32 texture;
+    glGenTextures(1, &texture);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, color_format, GL_UNSIGNED_BYTE, data);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    free(data);
+    return texture;
+}
+
+void set_uniform_int(u32 shader_program, const char *name, int value) {
+    glUniform1i(glGetUniformLocation(shader_program, name), value);
+}
+
 void print_help_msg() {
     printf("USAGE:\n");
     printf("    pin <image_path>\n");
@@ -106,26 +187,6 @@ const char *get_event_name(RGFW_eventType type) {
     }
 }
 
-void copy_image(u32 *dest, const u32 *src, int dest_width, int dest_height, int src_width, int src_height) {
-    if (dest_width == src_width && dest_height == src_height) {
-        memcpy(dest, src, (src_width * src_height) * 4);
-        return;
-    }
-    u32 *row_dest = dest;
-    for (int y = 0; y < dest_height; y++) {
-        int src_y = (float)y / (float)dest_height * src_height;
-        const u32 *row_src = src + (src_y * src_width);
-        u32 *pixel_dest = row_dest;
-        for (int x = 0; x < dest_width; x++) {
-            int src_x = (float)x / (float)dest_width * src_width;
-            const u32 *pixel_src = row_src + src_x;
-            *pixel_dest = *pixel_src;
-            pixel_dest++;
-        }
-        row_dest += dest_width;
-    }
-}
-
 void init() {
     init_ts = get_timespec();
 }
@@ -152,14 +213,50 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    RGFW_window *win = RGFW_createWindow("name", 0, 0, image_width, image_height, RGFW_windowNoBorder | RGFW_windowNoResize | RGFW_windowCenter | RGFW_windowFloating);
+    RGFW_window *win = RGFW_createWindow("name", 0, 0, image_width, image_height,
+                                         RGFW_windowNoBorder | RGFW_windowNoResize | RGFW_windowCenter | RGFW_windowFloating | RGFW_windowOpenGL);
 
     RGFW_event event;
+
+    int version = gladLoadGL(RGFW_getProcAddress_OpenGL);
+    if (version == 0) {
+        fprintf(stderr, "Failed to initialize OpenGL context\n");
+        return -1;
+    }
+    printf("Loaded OpenGL %d.%d\n", GLAD_VERSION_MAJOR(version), GLAD_VERSION_MINOR(version));
 
     RGFW_window_setExitKey(win, RGFW_escape);
     RGFW_window_setIcon(win, (u8 *)icon, 3, 3, RGFW_formatRGBA8);
 
-    RGFW_surface surface;
+    u32 shader_program = load_shader_program("./src/v.vert", "./src/f.frag");
+
+    u32 vao;
+    glGenVertexArrays(1, &vao);
+    u32 vbo;
+    glGenBuffers(1, &vbo);
+    u32 ebo;
+    glGenBuffers(1, &ebo);
+    {
+        glBindVertexArray(vao);
+        glBindBuffer(GL_ARRAY_BUFFER, vbo);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, vertex_stride, 0);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, vertex_stride, (void *)(3 * sizeof(float)));
+        glEnableVertexAttribArray(1);
+    }
+
+    glUseProgram(shader_program);
+    u32 texture1 = load_texture(path, GL_RGBA);
+    set_uniform_int(shader_program, "texture1", 0);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, texture1);
+
+    RGFW_window_swapInterval_OpenGL(win, 1);
+
     long long frame = 0;
     int scale_level = 0;
     while (RGFW_window_shouldClose(win) == false) {
@@ -194,22 +291,15 @@ int main(int argc, char **argv) {
         int new_width = image_width * scale_factor;
         int new_height = image_height * scale_factor;
         if (new_width != win->w || new_height != win->h) {
-            printf("window resizing %lld\n", frame);
             RGFW_window_resize(win, new_width, new_height);
+            glViewport(0, 0, new_width, new_height);
         }
 
-        printf("winsize: (%d, %d) %lld\n", win->w, win->h, frame);
         if (need_redraw) {
-            printf("redraw %lld\n", frame);
-            double start = get_time_seconds();
-            copy_image(pixels, (u32 *)image_data, win->w, win->h, image_width, image_height);
-            printf("copy_image took %fms\n", (get_time_seconds() - start) * 1000.0f);
-            start = get_time_seconds();
-            RGFW_createSurfacePtr((u8 *)pixels, win->w, win->h, RGFW_formatRGBA8, &surface);
-            printf("RGFW_createSurfacePtr took %fms\n", (get_time_seconds() - start) * 1000.0f);
-            start = get_time_seconds();
-            RGFW_window_blitSurface(win, &surface);
-            printf("RGFW_window_blitSurface took %fms\n", (get_time_seconds() - start) * 1000.0f);
+            glBindVertexArray(vao);
+            glDrawElements(GL_TRIANGLES, array_count(indices), GL_UNSIGNED_INT, 0);
+            RGFW_window_swapBuffers_OpenGL(win);
+            glFlush();
         }
     }
 
