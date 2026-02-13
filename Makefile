@@ -6,7 +6,7 @@ build: impl.o
     	./src/main.cpp ./impl.o
 
 impl.o: ./3rd/RGFW.h ./3rd/stb_image.h ./src/impl.c
-	clang -Wall -Wextra -Wno-unused-parameter -Wno-unused -c ./src/impl.c -fPIC
+	clang -Wall -Wextra -Wno-unused-parameter -Wno-unused -g -c ./src/impl.c -fPIC
 
 release:
 	clang++ -Wall -Wextra -Wno-unused-parameter -Wno-unused -o main \

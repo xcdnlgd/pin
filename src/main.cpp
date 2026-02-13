@@ -152,11 +152,7 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    RGFW_monitor monitor = RGFW_getPrimaryMonitor();
-    // TODO:HIDPI
-    // RGFW_window *win = RGFW_createWindow("name", (monitor.mode.w - image_width) / 2, (monitor.mode.h - image_height) / 2, image_width, image_height, RGFW_windowNoBorder | RGFW_windowNoResize);
-    // RGFW_window_setFloating(win, true); // always on top
-    RGFW_window *win = RGFW_createWindow("name", (monitor.mode.w - image_width) / 2, (monitor.mode.h - image_height) / 2, image_width, image_height, 0);
+    RGFW_window *win = RGFW_createWindow("name", 0, 0, image_width, image_height, RGFW_windowNoBorder | RGFW_windowNoResize | RGFW_windowCenter | RGFW_windowFloating);
 
     RGFW_event event;
 
@@ -194,22 +190,26 @@ int main(int argc, char **argv) {
             }
         }
 
-        // float scale_factor = 1.0f + (float)scale_level / 10.0f;
-        // int new_width = image_width * scale_factor;
-        // int new_height = image_height * scale_factor;
-        // if (new_width != win->w || new_height != win->h) {
-        //     printf("window resizing %lld\n", frame);
-        //     RGFW_window_resize(win, new_width, new_height);
-        // }
+        float scale_factor = 1.0f + (float)scale_level / 10.0f;
+        int new_width = image_width * scale_factor;
+        int new_height = image_height * scale_factor;
+        if (new_width != win->w || new_height != win->h) {
+            printf("window resizing %lld\n", frame);
+            RGFW_window_resize(win, new_width, new_height);
+        }
 
         printf("winsize: (%d, %d) %lld\n", win->w, win->h, frame);
         if (need_redraw) {
             printf("redraw %lld\n", frame);
             double start = get_time_seconds();
             copy_image(pixels, (u32 *)image_data, win->w, win->h, image_width, image_height);
-            printf("copy_image_took %fms\n", (get_time_seconds() - start) * 1000.0f);
+            printf("copy_image took %fms\n", (get_time_seconds() - start) * 1000.0f);
+            start = get_time_seconds();
             RGFW_createSurfacePtr((u8 *)pixels, win->w, win->h, RGFW_formatRGBA8, &surface);
+            printf("RGFW_createSurfacePtr took %fms\n", (get_time_seconds() - start) * 1000.0f);
+            start = get_time_seconds();
             RGFW_window_blitSurface(win, &surface);
+            printf("RGFW_window_blitSurface took %fms\n", (get_time_seconds() - start) * 1000.0f);
         }
     }
 
