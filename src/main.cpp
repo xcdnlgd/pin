@@ -11,8 +11,8 @@
 #define RGFW_IMPORT
 #define RGFW_UNIX
 #include "../3rd/RGFW.h"
-#include "../3rd/stb_image.h"
 #include "../3rd/glad/gl.h"
+#include "../3rd/stb_image.h"
 #endif
 
 #define array_count(array) (sizeof(array) / sizeof((array)[0]))
@@ -35,15 +35,35 @@ int success;
 char infoLog[512];
 
 float vertices[] = {
-    -1.0f, -1.0f, 0.0f,     0.0f, 0.0f,
-     1.0f, -1.0f, 0.0f,     1.0f, 0.0f,
-     1.0f,  1.0f, 0.0f,     1.0f, 1.0f,
-    -1.0f,  1.0f, 0.0f,     0.0f, 1.0f,
+    -1.0f,
+    -1.0f,
+    0.0f,
+    0.0f,
+    0.0f,
+    1.0f,
+    -1.0f,
+    0.0f,
+    1.0f,
+    0.0f,
+    1.0f,
+    1.0f,
+    0.0f,
+    1.0f,
+    1.0f,
+    -1.0f,
+    1.0f,
+    0.0f,
+    0.0f,
+    1.0f,
 };
 
 unsigned int indices[] = {
-    0, 1, 2,
-    0, 3, 2,
+    0,
+    1,
+    2,
+    0,
+    3,
+    2,
 };
 
 const u32 vertex_stride = 5 * sizeof(float);
@@ -225,7 +245,6 @@ int main(int argc, char **argv) {
     }
     printf("Loaded OpenGL %d.%d\n", GLAD_VERSION_MAJOR(version), GLAD_VERSION_MINOR(version));
 
-    RGFW_window_setExitKey(win, RGFW_escape);
     RGFW_window_setIcon(win, (u8 *)icon, 3, 3, RGFW_formatRGBA8);
 
     u32 shader_program = load_shader_program("./src/v.vert", "./src/f.frag");
@@ -259,6 +278,9 @@ int main(int argc, char **argv) {
 
     long long frame = 0;
     int scale_level = 0;
+    bool dragging = false;
+    int drag_start_local_x = 0;
+    int drag_start_local_y = 0;
     while (RGFW_window_shouldClose(win) == false) {
         frame++;
         RGFW_waitForEvent(-1);
@@ -266,8 +288,7 @@ int main(int argc, char **argv) {
         bool need_redraw = false;
 
         while (RGFW_window_checkEvent(win, &event)) {
-            if (event.type == RGFW_quit)
-                break;
+            if (event.type == RGFW_quit) return 0;
             switch (event.type) {
                 case RGFW_windowResized: {
                 } break;
@@ -276,6 +297,21 @@ int main(int argc, char **argv) {
                 case RGFW_keyReleased: {
                 } break;
                 case RGFW_mousePosChanged: {
+                } break;
+                case RGFW_mouseButtonPressed: {
+                    if (event.button.value == RGFW_mouseLeft) {
+                        dragging = true;
+                        assert(RGFW_window_getMouse(win, &drag_start_local_x, &drag_start_local_y));
+                        RGFW_window_setMouseStandard(win, RGFW_mouseResizeAll);
+                    } else if (event.button.value == RGFW_mouseMiddle) {
+                        return 0;
+                    }
+                } break;
+                case RGFW_mouseButtonReleased: {
+                    if (event.button.value == RGFW_mouseLeft) {
+                        dragging = false;
+                        RGFW_window_setMouseDefault(win);
+                    }
                 } break;
                 case RGFW_windowRefresh: {
                     need_redraw = true;
@@ -293,6 +329,17 @@ int main(int argc, char **argv) {
         if (new_width != win->w || new_height != win->h) {
             RGFW_window_resize(win, new_width, new_height);
             glViewport(0, 0, new_width, new_height);
+        }
+
+        if (dragging) {
+            int x;
+            int y;
+            assert(RGFW_getGlobalMouse(&x, &y));
+            int new_window_x = x - drag_start_local_x;
+            int new_window_y = y - drag_start_local_y;
+            if (win->x != new_window_x || win->y != new_window_y) {
+                RGFW_window_move(win, new_window_x, new_window_y);
+            }
         }
 
         if (need_redraw) {
