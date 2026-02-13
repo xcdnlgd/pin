@@ -197,16 +197,8 @@ u32 load_shader_program_source(const char *vert_source, const char *frag_source)
     return shader_program;
 }
 
-u32 load_texture(const char *path) {
-    stbi_set_flip_vertically_on_load(true);
-    int width, height, nrChannels;
-    u8 *data = stbi_load(path, &width, &height, &nrChannels, 4);
-    if (!data) {
-        fprintf(stderr, "ERROR: cannot load %s\n", path);
-        return 0;
-    }
+u32 memory_texture(u8* data, int width, int height) {
     GLenum color_format = GL_RGBA;
-    printf("loaded %s\n", path);
     u32 texture;
     glGenTextures(1, &texture);
     glBindTexture(GL_TEXTURE_2D, texture);
@@ -216,6 +208,19 @@ u32 load_texture(const char *path) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, color_format, GL_UNSIGNED_BYTE, data);
     glGenerateMipmap(GL_TEXTURE_2D);
+    return texture;
+}
+
+u32 load_texture(const char *path) {
+    stbi_set_flip_vertically_on_load(true);
+    int width, height;
+    u8 *data = stbi_load(path, &width, &height, 0, 4);
+    if (!data) {
+        fprintf(stderr, "ERROR: cannot load %s\n", path);
+        return 0;
+    }
+    printf("loaded %s\n", path);
+    u32 texture = memory_texture(data, width, height);
     free(data);
     return texture;
 }
@@ -303,12 +308,14 @@ int main(int argc, char **argv) {
 
     init();
 
+    stbi_set_flip_vertically_on_load(true);
     int image_width, image_height;
-    u8 *image_data = stbi_load(path, &image_width, &image_height, 0, 0);
+    u8 *image_data = stbi_load(path, &image_width, &image_height, 0, 4);
     if (!image_data) {
         fprintf(stderr, "Failed to load %s", path);
         return 1;
     }
+    printf("loaded %s\n", path);
 
     RGFW_monitor monitor = RGFW_getPrimaryMonitor();
     border_width *= monitor.scaleX;
@@ -352,7 +359,7 @@ int main(int argc, char **argv) {
     }
 
     glUseProgram(shader_program);
-    u32 texture1 = load_texture(path);
+    u32 texture1 = memory_texture(image_data, image_width, image_height);
     set_uniform_int(shader_program, "texture1", 0);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, texture1);
