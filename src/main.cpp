@@ -253,8 +253,8 @@ int main(int argc, char **argv) {
         fprintf(stderr, "Failed to allocate pixels");
         return 1;
     }
-
-    RGFW_window *win = RGFW_createWindow("name", 0, 0, image_width, image_height,
+    RGFW_setClassName("pin");
+    RGFW_window *win = RGFW_createWindow("pin", 0, 0, image_width, image_height,
                                          RGFW_windowNoBorder | RGFW_windowNoResize | RGFW_windowCenter | RGFW_windowFloating | RGFW_windowOpenGL | RGFW_windowTransparent);
 
     RGFW_event event;

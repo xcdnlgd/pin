@@ -1,12 +1,13 @@
 [Desktop Entry]
-Name=Pin
-Name[en_US]=Pin
-GenericName=Image pinner
-GenericName[en_US]=Image pinner
-Comment=Image pinner
-Exec=pin %u
-Terminal=false
 Type=Application
+Exec=pin %u
+Icon=/usr/share/pixmaps/pin.svg
+Terminal=false
 Categories=Graphics;2DGraphics;Viewer;
 MimeType=image/png;
 NoDisplay=true
+
+Name=pin
+GenericName=Image pinner
+Comment=Image pinner
+StartupWMClass=pin

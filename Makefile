@@ -23,10 +23,13 @@ install:
 	chmod 755 /usr/local/bin/pin
 	mkdir -p /usr/local/share/applications
 	cp -f pin.desktop /usr/local/share/applications
+	mkdir -p /usr/share/pixmaps
+	cp -f pin.svg /usr/share/pixmaps/pin.svg
 
 uninstall:
 	rm -f /usr/local/bin/pin
 	rm -f /usr/local/share/applications/pin.desktop
+	rm -f /usr/share/pixmaps/pin.svg
 
 loc:
 	tokei --exclude 3rd
