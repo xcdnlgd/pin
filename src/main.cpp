@@ -389,6 +389,9 @@ int main(int argc, char **argv) {
                         requestSystemMove(win);
                     } else if (event.button.value == RGFW_mouseMiddle) {
                         return 0;
+                    } else if (event.button.value == RGFW_mouseRight) {
+                        opacity_level = 0;
+                        scale_level = 0;
                     }
                 } break;
                 case RGFW_mouseButtonReleased: {
