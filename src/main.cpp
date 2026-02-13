@@ -34,27 +34,35 @@ u32 icon[3 * 3] = {
 int success;
 char infoLog[512];
 
+const char *vertex_source =
+    "#version 330 core\n"
+    "layout (location = 0) in vec3 a_pos;\n"
+    "layout (location = 1) in vec2 a_tex_coord;\n"
+    "\n"
+    "out vec2 tex_coord;\n"
+    "\n"
+    "void main()\n"
+    "{\n"
+    "    gl_Position = vec4(a_pos, 1.0);\n"
+    "    tex_coord = a_tex_coord;\n"
+    "}\n";
+
+const char *fragment_source =
+    "#version 330 core\n"
+    "out vec4 frag_color;\n"
+    "in vec2 tex_coord;\n"
+    "uniform sampler2D texture1;\n"
+    "\n"
+    "void main()\n"
+    "{\n"
+    "    frag_color = texture(texture1, tex_coord);\n"
+    "}\n";
+
 float vertices[] = {
-    -1.0f,
-    -1.0f,
-    0.0f,
-    0.0f,
-    0.0f,
-    1.0f,
-    -1.0f,
-    0.0f,
-    1.0f,
-    0.0f,
-    1.0f,
-    1.0f,
-    0.0f,
-    1.0f,
-    1.0f,
-    -1.0f,
-    1.0f,
-    0.0f,
-    0.0f,
-    1.0f,
+    -1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
+    1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
+    1.0f, 1.0f, 0.0f, 1.0f, 1.0f,
+    -1.0f, 1.0f, 0.0f, 0.0f, 1.0f
 };
 
 unsigned int indices[] = {
@@ -113,25 +121,28 @@ char *read_entire_file(const char *path) {
     return buffer;
 }
 
-u32 load_shader(const char *path, GLenum type) {
-    const char *shader_source = read_entire_file(path);
+u32 load_shader_source(const char *source, GLenum type) {
     u32 shader = glCreateShader(type);
-    glShaderSource(shader, 1, &shader_source, 0);
+    glShaderSource(shader, 1, &source, 0);
     glCompileShader(shader);
-    free((void *)shader_source);
     glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
     if (!success) {
         glGetShaderInfoLog(shader, sizeof(infoLog), NULL, infoLog);
-        fprintf(stderr, "ERROR: %s:%s\n", path, infoLog);
+        fprintf(stderr, "ERROR: %s\n", infoLog);
+        glDeleteShader(shader);
         return 0;
     }
     return shader;
 }
 
-u32 load_shader_program(const char *vert_path, const char *frag_path) {
-    u32 vertex_shader = load_shader(vert_path, GL_VERTEX_SHADER);
-    u32 fragment_shader = load_shader(frag_path, GL_FRAGMENT_SHADER);
+u32 load_shader_path(const char *path, GLenum type) {
+    const char *shader_source = read_entire_file(path);
+    u32 shader = load_shader_source(shader_source, type);
+    free((void *)shader_source);
+    return shader;
+}
 
+u32 load_load_shader_program(u32 vertex_shader, u32 fragment_shader) {
     u32 shader_program = glCreateProgram();
 
     glAttachShader(shader_program, vertex_shader);
@@ -146,6 +157,20 @@ u32 load_shader_program(const char *vert_path, const char *frag_path) {
         glDeleteProgram(shader_program);
         return 0;
     }
+    return shader_program;
+}
+
+u32 load_shader_program_path(const char *vert_path, const char *frag_path) {
+    u32 vertex_shader = load_shader_path(vert_path, GL_VERTEX_SHADER);
+    u32 fragment_shader = load_shader_path(frag_path, GL_FRAGMENT_SHADER);
+    u32 shader_program = load_load_shader_program(vertex_shader, fragment_shader);
+    return shader_program;
+}
+
+u32 load_shader_program_source(const char *vert_source, const char *frag_source) {
+    u32 vertex_shader = load_shader_source(vert_source, GL_VERTEX_SHADER);
+    u32 fragment_shader = load_shader_source(frag_source, GL_FRAGMENT_SHADER);
+    u32 shader_program = load_load_shader_program(vertex_shader, fragment_shader);
     return shader_program;
 }
 
@@ -247,7 +272,8 @@ int main(int argc, char **argv) {
 
     RGFW_window_setIcon(win, (u8 *)icon, 3, 3, RGFW_formatRGBA8);
 
-    u32 shader_program = load_shader_program("./src/v.vert", "./src/f.frag");
+    // u32 shader_program = load_shader_program_path("/home/xcdnlgd/dev/cpp/pin/src/v.vert", "/home/xcdnlgd/dev/cpp/pin/src/f.frag");
+    u32 shader_program = load_shader_program_source(vertex_source, fragment_source);
 
     u32 vao;
     glGenVertexArrays(1, &vao);
