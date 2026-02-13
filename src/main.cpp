@@ -25,12 +25,6 @@
 #define maximum(A, B) (((A) > (B)) ? (A) : (B))
 #define clamp(N, MIN, MAX) (maximum(minimum((N), (MAX)), (MIN)))
 
-u32 icon[3 * 3] = {
-    0xff0000ff, 0xff0000ff, 0xff0000ff,
-    0x000000ff, 0xff00ffff, 0xff00ffff,
-    0xff0000ff, 0xff0000ff, 0xff0000ff
-};
-
 int success;
 char infoLog[512];
 
@@ -52,10 +46,12 @@ const char *fragment_source =
     "out vec4 frag_color;\n"
     "in vec2 tex_coord;\n"
     "uniform sampler2D texture1;\n"
+    "uniform float opacity;\n"
     "\n"
     "void main()\n"
     "{\n"
-    "    frag_color = texture(texture1, tex_coord);\n"
+    "    vec4 tex_color = texture(texture1, tex_coord);\n"
+    "    frag_color = tex_color * opacity;\n"
     "}\n";
 
 float vertices[] = {
@@ -259,7 +255,7 @@ int main(int argc, char **argv) {
     }
 
     RGFW_window *win = RGFW_createWindow("name", 0, 0, image_width, image_height,
-                                         RGFW_windowNoBorder | RGFW_windowNoResize | RGFW_windowCenter | RGFW_windowFloating | RGFW_windowOpenGL);
+                                         RGFW_windowNoBorder | RGFW_windowNoResize | RGFW_windowCenter | RGFW_windowFloating | RGFW_windowOpenGL | RGFW_windowTransparent);
 
     RGFW_event event;
 
@@ -270,10 +266,11 @@ int main(int argc, char **argv) {
     }
     printf("Loaded OpenGL %d.%d\n", GLAD_VERSION_MAJOR(version), GLAD_VERSION_MINOR(version));
 
-    RGFW_window_setIcon(win, (u8 *)icon, 3, 3, RGFW_formatRGBA8);
-
-    // u32 shader_program = load_shader_program_path("/home/xcdnlgd/dev/cpp/pin/src/v.vert", "/home/xcdnlgd/dev/cpp/pin/src/f.frag");
+#ifdef RELEASE
     u32 shader_program = load_shader_program_source(vertex_source, fragment_source);
+#else
+    u32 shader_program = load_shader_program_path("/home/xcdnlgd/dev/cpp/pin/src/v.vert", "/home/xcdnlgd/dev/cpp/pin/src/f.frag");
+#endif
 
     u32 vao;
     glGenVertexArrays(1, &vao);
@@ -300,13 +297,17 @@ int main(int argc, char **argv) {
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, texture1);
 
+    int opacity_loc = glGetUniformLocation(shader_program, "opacity");
+
     RGFW_window_swapInterval_OpenGL(win, 1);
 
     long long frame = 0;
     int scale_level = 0;
+    int opacity_level = 0;
     bool dragging = false;
     int drag_start_local_x = 0;
     int drag_start_local_y = 0;
+    bool ctrl_down = false;
     while (RGFW_window_shouldClose(win) == false) {
         frame++;
         RGFW_waitForEvent(-1);
@@ -319,8 +320,14 @@ int main(int argc, char **argv) {
                 case RGFW_windowResized: {
                 } break;
                 case RGFW_keyPressed: {
+                    if (event.key.value == RGFW_controlL || event.key.value == RGFW_controlR) {
+                        ctrl_down = true;
+                    }
                 } break;
                 case RGFW_keyReleased: {
+                    if (event.key.value == RGFW_controlL || event.key.value == RGFW_controlR) {
+                        ctrl_down = false;
+                    }
                 } break;
                 case RGFW_mousePosChanged: {
                 } break;
@@ -343,8 +350,14 @@ int main(int argc, char **argv) {
                     need_redraw = true;
                 } break;
                 case RGFW_mouseScroll: {
-                    scale_level += event.scroll.y;
-                    scale_level = clamp(scale_level, -9, 10);
+                    if (ctrl_down) {
+                        opacity_level += event.scroll.y;
+                        opacity_level = clamp(opacity_level, -9, 0);
+                        need_redraw = true;
+                    } else {
+                        scale_level += event.scroll.y;
+                        scale_level = clamp(scale_level, -9, 10);
+                    }
                 } break;
             }
         }
@@ -370,6 +383,8 @@ int main(int argc, char **argv) {
 
         if (need_redraw) {
             glBindVertexArray(vao);
+            float opacity = 1.0f + (float)opacity_level / 10.0f;
+            glUniform1f(opacity_loc, opacity);
             glDrawElements(GL_TRIANGLES, array_count(indices), GL_UNSIGNED_INT, 0);
             RGFW_window_swapBuffers_OpenGL(win);
             glFlush();

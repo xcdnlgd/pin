@@ -1,0 +1,12 @@
+[Desktop Entry]
+Name=Pin
+Name[en_US]=Pin
+GenericName=Image pinner
+GenericName[en_US]=Image pinner
+Comment=Image pinner
+Exec=pin %u
+Terminal=false
+Type=Application
+Categories=Graphics;2DGraphics;Viewer;
+MimeType=image/png;
+NoDisplay=true
