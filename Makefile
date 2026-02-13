@@ -15,9 +15,11 @@ release:
     	-lX11 -lXrandr -lm -lGL \
     	./src/main.cpp
 clean:
-	rm -f ./impl.o ./main
+	rm -f ./impl.o ./pin
 
-install:
+pin:
+	$(MAKE) release
+install: pin
 	mkdir -p /usr/local/bin
 	cp -f pin /usr/local/bin
 	chmod 755 /usr/local/bin/pin

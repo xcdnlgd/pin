@@ -28,6 +28,8 @@
 int success;
 char infoLog[512];
 
+int border_width = 3;
+
 const char *vertex_source =
     "#version 330 core\n"
     "layout (location = 0) in vec3 a_pos;\n"
@@ -47,11 +49,27 @@ const char *fragment_source =
     "in vec2 tex_coord;\n"
     "uniform sampler2D texture1;\n"
     "uniform float opacity;\n"
+    "uniform float border_width;\n"
+    "uniform float width;\n"
+    "uniform float height;\n"
     "\n"
     "void main()\n"
     "{\n"
-    "    vec4 tex_color = texture(texture1, tex_coord);\n"
-    "    frag_color = tex_color * opacity;\n"
+    "    float x_scale = (width+2*border_width)/width;\n"
+    "    float y_scale = (height+2*border_width)/height;\n"
+    "\n"
+    "    vec2 scaled_uv;\n"
+    "    scaled_uv.x = (tex_coord.x - 0.5) * x_scale + 0.5;\n"
+    "    scaled_uv.y = (tex_coord.y - 0.5) * y_scale + 0.5;\n"
+    "\n"
+    "    bool is_image = (scaled_uv.x >= 0.0 && scaled_uv.x <= 1.0 &&\n"
+    "                     scaled_uv.y >= 0.0 && scaled_uv.y <= 1.0);\n"
+    "\n"
+    "    if (is_image) {\n"
+    "        frag_color = texture(texture1, scaled_uv) * opacity;\n"
+    "    } else {\n"
+    "        frag_color = vec4(0.3098, 0.7058, 0.9176, 1.0) * opacity;\n"
+    "    }\n"
     "}\n";
 
 float vertices[] = {
@@ -62,12 +80,8 @@ float vertices[] = {
 };
 
 unsigned int indices[] = {
-    0,
-    1,
-    2,
-    0,
-    3,
-    2,
+    0, 1, 2,
+    0, 3, 2
 };
 
 const u32 vertex_stride = 5 * sizeof(float);
@@ -196,6 +210,10 @@ void set_uniform_int(u32 shader_program, const char *name, int value) {
     glUniform1i(glGetUniformLocation(shader_program, name), value);
 }
 
+void set_uniform_float(u32 shader_program, const char *name, float value) {
+    glUniform1f(glGetUniformLocation(shader_program, name), value);
+}
+
 void print_help_msg() {
     printf("USAGE:\n");
     printf("    pin <image_path>\n");
@@ -248,13 +266,8 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    u32 *pixels = (u32 *)malloc(megabytes(128)); // can hold 8K resolution
-    if (!pixels) {
-        fprintf(stderr, "Failed to allocate pixels");
-        return 1;
-    }
     RGFW_setClassName("pin");
-    RGFW_window *win = RGFW_createWindow("pin", 0, 0, image_width, image_height,
+    RGFW_window *win = RGFW_createWindow("pin", 0, 0, image_width + 2 * border_width, image_height + 2 * border_width,
                                          RGFW_windowNoBorder | RGFW_windowNoResize | RGFW_windowCenter | RGFW_windowFloating | RGFW_windowOpenGL | RGFW_windowTransparent);
 
     RGFW_event event;
@@ -297,8 +310,6 @@ int main(int argc, char **argv) {
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, texture1);
 
-    int opacity_loc = glGetUniformLocation(shader_program, "opacity");
-
     RGFW_window_swapInterval_OpenGL(win, 1);
 
     long long frame = 0;
@@ -308,6 +319,8 @@ int main(int argc, char **argv) {
     int drag_start_local_x = 0;
     int drag_start_local_y = 0;
     bool ctrl_down = false;
+    float x_scale = 0;
+    float y_scale = 0;
     while (RGFW_window_shouldClose(win) == false) {
         frame++;
         RGFW_waitForEvent(-1);
@@ -363,8 +376,8 @@ int main(int argc, char **argv) {
         }
 
         float scale_factor = 1.0f + (float)scale_level / 10.0f;
-        int new_width = image_width * scale_factor;
-        int new_height = image_height * scale_factor;
+        int new_width = image_width * scale_factor + 2 * border_width;
+        int new_height = image_height * scale_factor + 2 * border_width;
         if (new_width != win->w || new_height != win->h) {
             RGFW_window_resize(win, new_width, new_height);
             glViewport(0, 0, new_width, new_height);
@@ -384,7 +397,10 @@ int main(int argc, char **argv) {
         if (need_redraw) {
             glBindVertexArray(vao);
             float opacity = 1.0f + (float)opacity_level / 10.0f;
-            glUniform1f(opacity_loc, opacity);
+            set_uniform_float(shader_program, "opacity", opacity);
+            set_uniform_float(shader_program, "border_width", border_width);
+            set_uniform_float(shader_program, "width", image_width * scale_factor);
+            set_uniform_float(shader_program, "height", image_height * scale_factor);
             glDrawElements(GL_TRIANGLES, array_count(indices), GL_UNSIGNED_INT, 0);
             RGFW_window_swapBuffers_OpenGL(win);
             glFlush();

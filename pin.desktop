@@ -11,3 +11,4 @@ Name=pin
 GenericName=Image pinner
 Comment=Image pinner
 StartupWMClass=pin
+StartupNotify=false
