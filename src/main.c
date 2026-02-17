@@ -313,7 +313,7 @@ int main(int argc, char **argv) {
     int image_width, image_height;
     u8 *image_data = stbi_load(path, &image_width, &image_height, 0, 4);
     if (!image_data) {
-        fprintf(stderr, "Failed to load %s", path);
+        fprintf(stderr, "Failed to load %s\n", path);
         return 1;
     }
     printf("loaded %s\n", path);
