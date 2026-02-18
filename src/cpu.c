@@ -12,6 +12,8 @@
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "../3rd/stb_image.h"
+#define STB_IMAGE_RESIZE_IMPLEMENTATION
+#include "../3rd/stb_image_resize2.h"
 
 typedef uint8_t u8;
 typedef uint16_t u16;
@@ -167,19 +169,9 @@ void fill_border(BackBuffer *buffer) {
 }
 
 void copy_buffer(BackBuffer *dest, BackBuffer *src) {
-    u32 *dest_row_start = dest->pixels;
-    for (int dest_y = 0; dest_y < dest->height; dest_y++) {
-        int src_y = (dest_y * src->height) / dest->height;
-        u32 *dest_pixel = dest_row_start;
-        u32 *src_row_start = src->pixels + src_y * src->stride;
-        for (int dest_x = 0; dest_x < dest->width; dest_x++) {
-            int src_x = (dest_x * src->width) / dest->width;
-            u32 *src_pixel = src_row_start + src_x;
-            *dest_pixel = *src_pixel;
-            dest_pixel++;
-        }
-        dest_row_start += dest->stride;
-    }
+    stbir_resize_uint8_srgb((u8 *)src->pixels, src->width, src->height, src->stride * 4,
+                            (u8 *)dest->pixels, dest->width, dest->height, dest->stride * 4,
+                            STBIR_BGRA_PM);
 }
 
 void render(BackBuffer *buffer, float opacity) {
