@@ -274,11 +274,10 @@ void requestSystemMove(RGFW_window *win) {
     Display *display = (Display *)RGFW_getDisplay_X11();
     Atom moveResizeAtom = XInternAtom(display, "_NET_WM_MOVERESIZE", False);
 
-    XEvent xev;
-    memset(&xev, 0, sizeof(xev));
+    XEvent xev = {0};
     xev.xclient.type = ClientMessage;
     xev.xclient.message_type = moveResizeAtom;
-    xev.xclient.display = (Display *)RGFW_getDisplay_X11();
+    xev.xclient.display = display;
     xev.xclient.window = win->src.window;
     xev.xclient.format = 32;
 

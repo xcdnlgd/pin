@@ -1,25 +1,36 @@
-.PHONY: build release clean install loc
-build: impl.o
+.PHONY: build_gpu release_gpu build_cpu release_cpu clean install loc
+build_gpu: impl.o
 	clang -Wall -Wextra -Wno-unused-parameter -Wno-unused -o pin \
     	-g \
     	-lX11 -lXrandr -lm -lGL \
-    	./src/main.c ./impl.o
+    	./src/gpu.c ./impl.o
 
 impl.o: ./3rd/glad/gl.h ./3rd/RGFW.h ./3rd/stb_image.h ./src/impl.c
 	clang -Wall -Wextra -Wno-unused-parameter -Wno-unused -g -c ./src/impl.c -fPIC
 
-release:
+release_gpu:
 	clang -Wall -Wextra -Wno-unused-parameter -Wno-unused -o pin \
 		-D RELEASE \
     	-O2 \
     	-lX11 -lXrandr -lm -lGL \
-    	./src/main.c
+    	./src/gpu.c
+
+build_cpu:
+	clang -Wall -Wextra -Wno-unused-parameter -Wno-unused -o pin \
+    	-g \
+    	-lX11 -lm \
+    	./src/cpu.c
+
+release_cpu:
+	clang -Wall -Wextra -Wno-unused-parameter -Wno-unused -o pin \
+    	-O2 \
+    	-lX11 -lm \
+    	./src/cpu.c
+
 clean:
 	rm -f ./impl.o ./pin
 
-pin:
-	$(MAKE) release
-install: pin
+install:
 	mkdir -p /usr/local/bin
 	cp -f pin /usr/local/bin
 	chmod 755 /usr/local/bin/pin
