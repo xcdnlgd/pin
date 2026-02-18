@@ -169,11 +169,11 @@ void fill_border(BackBuffer *buffer) {
 void copy_buffer(BackBuffer *dest, BackBuffer *src) {
     u32 *dest_row_start = dest->pixels;
     for (int dest_y = 0; dest_y < dest->height; dest_y++) {
-        int src_y = (float)dest_y / dest->height * src->height;
+        int src_y = (dest_y * src->height) / dest->height;
         u32 *dest_pixel = dest_row_start;
         u32 *src_row_start = src->pixels + src_y * src->stride;
         for (int dest_x = 0; dest_x < dest->width; dest_x++) {
-            int src_x = (float)dest_x / dest->width * src->width;
+            int src_x = (dest_x * src->width) / dest->width;
             u32 *src_pixel = src_row_start + src_x;
             *dest_pixel = *src_pixel;
             dest_pixel++;
