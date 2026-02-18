@@ -15,6 +15,7 @@ https://github.com/user-attachments/assets/8ae41134-435e-46e2-a792-3e9e04a41aeb
 - Hold ctrl and scroll mouse wheel to change opacity
 - Drag to move the window
 - Middle click to close the window
+- Right click to reset size and opacity
 
 You can pin screenshot from spectacle using the `export` button
 
@@ -54,3 +55,5 @@ The cpu version has much lower ram usage (~10MB) compare to the gpu version (~16
 * Tsoding's [video](https://www.youtube.com/watch?v=764fnfEb1_c) for showing how to use Xlib
 
 * Tsoding's another [video](https://www.youtube.com/watch?v=0rUBhqR6ckw) for introducing RGFW
+
+* [gf](https://github.com/nakst/gf) greate GDB frontend
