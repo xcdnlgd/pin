@@ -9,7 +9,7 @@ impl.o: ./3rd/glad/gl.h ./3rd/RGFW.h ./3rd/stb_image.h ./src/impl.c
 	clang -Wall -Wextra -Wno-unused-parameter -Wno-unused -g -c ./src/impl.c -fPIC
 
 release_gpu:
-	clang -Wall -Wextra -Wno-unused-parameter -Wno-unused -o pin \
+	clang -Wall -Wextra -Wno-unused-parameter -Wno-unused -Wno-c23-extensions -o pin \
 		-D RELEASE \
     	-O2 \
     	-lX11 -lXrandr -lm -lGL \

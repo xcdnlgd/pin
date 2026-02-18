@@ -1,8 +1,8 @@
 #include <errno.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdbool.h>
 #include <time.h>
 #ifdef RELEASE
 #include "./impl.c"
@@ -33,58 +33,17 @@ char infoLog[512];
 
 int border_width = 5;
 
-const char *vertex_source =
-    "#version 330 core\n"
-    "layout (location = 0) in vec3 a_pos;\n"
-    "layout (location = 1) in vec2 a_tex_coord;\n"
-    "\n"
-    "out vec2 tex_coord;\n"
-    "\n"
-    "void main()\n"
-    "{\n"
-    "    gl_Position = vec4(a_pos, 1.0);\n"
-    "    tex_coord = a_tex_coord;\n"
-    "}\n";
+#ifdef RELEASE
+const char vertex_source[] = {
+#embed "./v.vert"
+    , 0
+};
 
-const char *fragment_source =
-    "#version 330 core\n"
-    "out vec4 frag_color;\n"
-    "in vec2 tex_coord;\n"
-    "uniform sampler2D texture1;\n"
-    "uniform float opacity;\n"
-    "uniform float border_width;\n"
-    "uniform float width;\n"
-    "uniform float height;\n"
-    "\n"
-    "float sdBox( in vec2 p, in vec2 b )\n"
-    "{\n"
-    "    vec2 d = abs(p)-b;\n"
-    "    return length(max(d,0.0)) + min(max(d.x,d.y),0.0);\n"
-    "}\n"
-    "\n"
-    "void main()\n"
-    "{\n"
-    "    float x_scale = (width+2*border_width)/width;\n"
-    "    float y_scale = (height+2*border_width)/height;\n"
-    "\n"
-    "    vec2 scaled_uv;\n"
-    "    scaled_uv.x = (tex_coord.x - 0.5) * x_scale + 0.5;\n"
-    "    scaled_uv.y = (tex_coord.y - 0.5) * y_scale + 0.5;\n"
-    "\n"
-    "    bool is_image = (scaled_uv.x >= 0.0 && scaled_uv.x <= 1.0 &&\n"
-    "                     scaled_uv.y >= 0.0 && scaled_uv.y <= 1.0);\n"
-    "\n"
-    "    if (is_image) {\n"
-    "        frag_color = texture(texture1, scaled_uv) * opacity;\n"
-    "    } else {\n"
-    "        vec2 b = vec2(width/2, height/2);\n"
-    "        vec2 p;\n"
-    "        p.x = (tex_coord.x-0.5)*(width+2*border_width);\n"
-    "        p.y = (tex_coord.y-0.5)*(height+2*border_width);\n"
-    "        float t = sdBox(p, b) / border_width;\n"
-    "        frag_color = mix(vec4(0.3098, 0.7058, 0.9176, 1.0) * opacity, vec4(0, 0, 0, 0), t);\n"
-    "    }\n"
-    "}\n";
+const char fragment_source[] = {
+#embed "./f.frag"
+    , 0
+};
+#endif
 
 float vertices[] = {
     -1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
@@ -198,7 +157,7 @@ u32 load_shader_program_source(const char *vert_source, const char *frag_source)
     return shader_program;
 }
 
-u32 memory_texture(u8* data, int width, int height) {
+u32 memory_texture(u8 *data, int width, int height) {
     GLenum color_format = GL_RGBA;
     u32 texture;
     glGenTextures(1, &texture);
@@ -274,7 +233,7 @@ void requestSystemMove(RGFW_window *win) {
     Display *display = (Display *)RGFW_getDisplay_X11();
     Atom moveResizeAtom = XInternAtom(display, "_NET_WM_MOVERESIZE", False);
 
-    XEvent xev = {0};
+    XEvent xev = { 0 };
     xev.xclient.type = ClientMessage;
     xev.xclient.message_type = moveResizeAtom;
     xev.xclient.display = display;
