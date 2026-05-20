@@ -27,6 +27,27 @@ release_cpu:
     	-lX11 -lm \
     	./src/cpu.c
 
+build_cpu_wayland:
+	clang -Wall -Wextra -Wno-unused-parameter -Wno-unused -o pin \
+    	-g \
+    	-lwayland-client \
+    	-lm \
+    	./src/cpu_wayland.c
+
+wayland_files:
+	rm -rf ./wayland/
+	mkdir ./wayland/
+	wayland-scanner client-header < /usr/share/wayland-protocols/stable/xdg-shell/xdg-shell.xml > ./wayland/xdg-shell-client-protocol.h
+	wayland-scanner private-code < /usr/share/wayland-protocols/stable/xdg-shell/xdg-shell.xml > ./wayland/xdg-shell-protocol.c
+	wayland-scanner client-header < /usr/share/wayland-protocols/stable/tablet/tablet-v2.xml > ./wayland/tablet-v2-client-protocol.h
+	wayland-scanner private-code < /usr/share/wayland-protocols/stable/tablet/tablet-v2.xml > ./wayland/tablet-v2-protocol.c
+	wayland-scanner client-header < /usr/share/wayland-protocols/staging/cursor-shape/cursor-shape-v1.xml > ./wayland/cursor-shape-v1-client-protocol.h
+	wayland-scanner private-code < /usr/share/wayland-protocols/staging/cursor-shape/cursor-shape-v1.xml > ./wayland/cursor-shape-v1-protocol.c
+	wayland-scanner client-header < /usr/share/wayland-protocols/staging/fractional-scale/fractional-scale-v1.xml > ./wayland/fractional-scale-v1-client-protocol.h
+	wayland-scanner private-code < /usr/share/wayland-protocols/staging/fractional-scale/fractional-scale-v1.xml > ./wayland/fractional-scale-v1-protocol.c
+	wayland-scanner client-header < /usr/share/wayland-protocols/stable/viewporter/viewporter.xml > ./wayland/viewporter-client-protocol.h
+	wayland-scanner private-code < /usr/share/wayland-protocols/stable/viewporter/viewporter.xml > ./wayland/viewporter-protocol.c
+
 clean:
 	rm -f ./impl.o ./pin
 
